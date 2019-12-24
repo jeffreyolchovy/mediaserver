@@ -1,0 +1,18 @@
+---
+- hosts: mediaservers
+  remote_user: pirate
+  tasks:
+    - name: Copy services directory to remote server
+      copy:
+        src: services
+        dest: /tmp
+
+    - name: Tear down existing services
+      command: docker-compose down --remove-orphans
+      args:
+        chdir: /tmp/services
+
+    - name: Create and start services
+      command: docker-compose up -d
+      args:
+        chdir: /tmp/services

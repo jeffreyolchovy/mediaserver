@@ -1,0 +1,85 @@
+version: '3.4'
+services:
+  duckdns:
+    container_name: duckdns
+    image: linuxserver/duckdns:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SUBDOMAINS=${DNS_SUBDOMAINS}
+      - TOKEN=${DNS_TOKEN}
+    volumes:
+      - ${ROOT}/config/duckdns:/config
+
+  deluge:
+    container_name: deluge
+    image: linuxserver/deluge:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/downloads:/downloads
+      - ${ROOT}/config/deluge:/config
+
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/downloads/torrent-blackhole:/downloads
+      - ${ROOT}/config/jackett:/config
+
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/config/sonarr:/config
+      - ${ROOT}/complete/tv:/tv
+      - ${ROOT}/downloads:/downloads
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/config/radarr:/config
+      - ${ROOT}/complete/movies:/movies
+      - ${ROOT}/downloads:/downloads
+
+  plex-server:
+    container_name: plex-server
+    image: linuxserver/plex:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - VERSION=docker
+    network_mode: host
+    volumes:
+      - ${ROOT}/config/plex:/config
+      - ${ROOT}/complete:/data
+

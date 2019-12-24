@@ -1,0 +1,9 @@
+---
+- hosts: mediaservers
+  remote_user: pirate
+  tasks:
+    - name: Test connection to remote server
+      ping:
+
+- import_playbook: storage.yml
+- import_playbook: services.yml

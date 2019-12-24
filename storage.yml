@@ -1,0 +1,24 @@
+---
+- hosts: mediaservers
+  remote_user: pirate
+  become: true
+  become_user: root
+  become_method: sudo
+
+  tasks:
+    - name: Install ntfs-3g package
+      apt:
+        name: ntfs-3g
+
+    - name: Create directory to serve as mount point
+      file:
+        path: /mnt/extmedia
+        state: directory
+
+    - name: Mount external drive
+      mount:
+        path: /mnt/extmedia
+        src: UUID=AE6C5A086C59CC29
+        fstype: ntfs-3g
+        opts: rw,nofail,user,exec,umask=000
+        state: mounted
