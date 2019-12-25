@@ -15,10 +15,18 @@
         path: /mnt/extmedia
         state: directory
 
+    - name: Capture UUID of external drive
+      shell: echo $(blkid | grep 'ntfs' | sed -E 's!^.*UUID="([^"]*)" ?.*"!\1!')
+      register: echo_content
+
+    - set_fact:
+        uuid: '{{ echo_content.stdout }}'
+        cacheable: yes
+
     - name: Mount external drive
       mount:
         path: /mnt/extmedia
-        src: UUID=AE6C5A086C59CC29
+        src: 'UUID={{ uuid }}'
         fstype: ntfs-3g
         opts: rw,nofail,user,exec,umask=000
         state: mounted
