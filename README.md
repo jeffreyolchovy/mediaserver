@@ -20,6 +20,7 @@ A home media server powered by a Raspberry Pi 4 Model B. It leverages HypriotOS 
 ## Assumptions
 * Raspberry 4 Model B 1.5GHz 64-bit quad-core ARMv8 CPU with 4GB RAM
 * `ntfs` formatted external 4TB USB hard drive
+* Working knowledge of ansible playbooks, Docker (in general), and docker-compose.yml files
 * Verizon Fios supplied router
 
 ## Setup and Installation
@@ -46,7 +47,7 @@ A home media server powered by a Raspberry Pi 4 Model B. It leverages HypriotOS 
 1. Power on the Raspberry Pi.
 2. From the supporting machine attempt to ssh into the Raspberry Pi using `username@hostname` (entering your plain-text password when prompted). These credentials can be found in your `wifi.yml` configuration file from the previous step.
 
-### Take out static lease on router
+### Take out static DHCP lease on router (next steps assume Verizon Fios provided router)
 1. Log in to the router's control plane at [http://192.168.1.1](http://192.168.1.1).
 2. Using the top navigation menu, choose `Advanced`.
 3. Then navigate to `IP Address Distribution`.
@@ -54,6 +55,8 @@ A home media server powered by a Raspberry Pi 4 Model B. It leverages HypriotOS 
 5. Find your Raspberry Pi device and click `Edit`.
 6. Enable the option to take out a static lease.
 7. Note the local IP address that was allocated to the device.
+
+If not using a Verizon Fios provided router, consult your router manufacturer's instructions on reserving a static IP address for your Raspberry Pi (i.e. see their instructions for Static DHCP or DHCP reservations).
 
 ### Setup passwordless access from supporting machine
 1. Generate ssh key for supporting machine if not already present.
