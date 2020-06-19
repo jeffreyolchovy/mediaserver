@@ -83,3 +83,18 @@ services:
       - ${ROOT}/config/plex:/config
       - ${ROOT}/complete:/data
 
+  emby:
+    container_name: emby
+    image: linuxserver/emby:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/emby:/config
+      - ${ROOT}/config/emby/transcoding:/transcode
+      - ${ROOT}/complete/tv:/data/tvshows
+      - ${ROOT}/complete/movies:/data/movies
+
