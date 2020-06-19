@@ -5,14 +5,15 @@
     - name: Copy services directory to remote server
       copy:
         src: services
-        dest: /tmp
+        dest: /var/run
+      become: yes
 
     - name: Tear down existing services
       command: docker-compose down --remove-orphans
       args:
-        chdir: /tmp/services
+        chdir: /var/run/services
 
     - name: Create and start services
       command: docker-compose up -d
       args:
-        chdir: /tmp/services
+        chdir: /var/run/services
