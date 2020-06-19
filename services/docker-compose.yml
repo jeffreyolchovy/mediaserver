@@ -74,11 +74,11 @@ services:
     container_name: plex-server
     image: linuxserver/plex:latest
     restart: unless-stopped
+    network_mode: host
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - VERSION=docker
-    network_mode: host
     volumes:
       - ${ROOT}/config/plex:/config
       - ${ROOT}/complete:/data
