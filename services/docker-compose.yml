@@ -70,19 +70,6 @@ services:
       - ${ROOT}/complete/movies:/movies
       - ${ROOT}/downloads:/downloads
 
-  plex-server:
-    container_name: plex-server
-    image: linuxserver/plex:latest
-    restart: unless-stopped
-    network_mode: host
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - VERSION=docker
-    volumes:
-      - ${ROOT}/config/plex:/config
-      - ${ROOT}/complete:/data
-
   emby:
     container_name: emby
     image: linuxserver/emby:latest
