@@ -1,5 +1,5 @@
 # mediaserver
-A home media server powered by a Raspberry Pi 4 Model B. It leverages HypriotOS and containerized versions of Deluge, Jackett, Sonarr, Radarr, and Emby. Media and service configuration is stored on an external USB hard drive.
+A home media server powered by a Raspberry Pi 4 Model B. It leverages HypriotOS and containerized versions of Deluge, Jackett, Sonarr, Radarr, and Emby. Media and service configuration is stored on an external USB hard drive. A containerized Samba server enables remote file management.
 
 * [Requirements](#requirements)
 * [Assumptions](#assumptions)
