@@ -1,0 +1,32 @@
+---
+- hosts: mediaservers
+  remote_user: pirate
+  become: true
+  become_user: root
+  become_method: sudo
+
+  tasks:
+    - name: Ensure directory exists for VPN config files
+      file:
+        path: /mnt/extmedia/config/vpn
+        state: directory
+
+    - name: Copy VPN PEM file to remote host
+      ansible.builtin.copy:
+        src: vpn/crl.rsa.2048.pem
+        dest: /mnt/extmedia/config/vpn/crl.rsa.2048.pem
+
+    - name: Copy VPN CRT file to remote host
+      ansible.builtin.copy:
+        src: vpn/ca.rsa.2048.crt
+        dest: /mnt/extmedia/config/vpn/ca.rsa.2048.crt
+
+    - name: Copy VPN config file to remote host
+      ansible.builtin.copy:
+        src: vpn/vpn.conf
+        dest: /mnt/extmedia/config/vpn/vpn.conf
+
+    - name: Write VPN creds file to remote host
+      ansible.builtin.copy:
+        src: vpn/vpn.auth
+        dest: /mnt/extmedia/config/vpn/vpn.auth

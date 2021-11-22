@@ -6,4 +6,5 @@
       ping:
 
 - import_playbook: storage.yml
+- import_playbook: vpn.yml
 - import_playbook: services.yml
