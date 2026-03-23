@@ -1,4 +1,3 @@
-version: '3.4'
 services:
   duckdns:
     container_name: duckdns
@@ -15,24 +14,26 @@ services:
 
   vpn:
     container_name: vpn
-    image: dperson/openvpn-client:latest
+    image: ghcr.io/utkuozdemir/dperson-openvpn-client:latest
     cap_add:
-      - net_admin # required to modify network interfaces
+      - net_admin
     restart: unless-stopped
+    environment:
+      - OTHER_ARGS='--mute-replay-warnings'
     volumes:
-      - /dev/net:/dev/net:z # tun device
-      - ${ROOT}/config/vpn:/vpn # OpenVPN configuration
+      - /dev/net:/dev/net:z
+      - ${ROOT}/config/vpn:/vpn
     security_opt:
       - label:disable
     ports:
-      - 8112:8112 # port for deluge web UI to be reachable from local network
-    command: "-r 192.168.1.0/24" # route local network traffic
+      - 8112:8112
+    command: "-r 192.168.1.0/24"
 
   deluge:
     container_name: deluge
     image: linuxserver/deluge:latest
     restart: unless-stopped
-    network_mode: service:vpn # run on the vpn network
+    network_mode: service:vpn
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -40,6 +41,21 @@ services:
     volumes:
       - ${ROOT}/downloads:/downloads
       - ${ROOT}/config/deluge:/config
+
+  flaresolverr:
+    container_name: flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
 
   jackett:
     container_name: jackett
@@ -54,6 +70,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ${ROOT}/downloads/torrent-blackhole:/downloads
       - ${ROOT}/config/jackett:/config
+    depends_on:
+      - flaresolverr
 
   sonarr:
     container_name: sonarr
@@ -87,36 +105,32 @@ services:
 
   emby:
     container_name: emby
-    image: linuxserver/emby:latest
+    image: emby/embyserver_arm64v8:latest
     restart: unless-stopped
     network_mode: host
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
+    ports:
+      - 8096:8096
     volumes:
       - ${ROOT}/config/emby:/config
       - ${ROOT}/config/emby/transcoding:/transcode
       - ${ROOT}/complete/tv:/data/tvshows
       - ${ROOT}/complete/movies:/data/movies
+      - ${ROOT}/complete/shared/tv:/data/shared/tvshows
+      - ${ROOT}/complete/shared/movies:/data/shared/movies
 
   samba:
     container_name: samba
-    image: dperson/samba
+    image: crazymax/samba
     restart: unless-stopped
     network_mode: host
-    ports:
-      - "137:137/udp"
-      - "138:138/udp"
-      - "139:139/tcp"
-      - "445:445/tcp"
     environment:
-      - USERID=${PUID}
-      - GROUPID=${PGID}
       - TZ=${TZ}
-      - NMDB=True
-      - RECYCLE=False
+      - SAMBA_WORKGROUP=WORKGROUP
+      - WSDD2_ENABLE=1
     volumes:
+      - ${ROOT}/config/samba:/data
       - ${ROOT}:/extmedia
-    command: >
-      -s extmedia;/extmedia;yes;no;yes;all
