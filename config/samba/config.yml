@@ -1,0 +1,19 @@
+auth:
+  - user: smbuser
+    group: smbuser
+    uid: 1000
+    gid: 1000
+    password: smbuser
+
+global:
+  - "force user = smbuser"
+  - "force group = smbuser"
+  - "map to guest = Bad User"
+
+share:
+  - name: extmedia
+    path: /extmedia
+    browsable: yes
+    readonly: no
+    guestok: yes
+    veto: no

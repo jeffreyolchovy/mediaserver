@@ -1,0 +1,8 @@
+# Secrets -- never commit these
+config/.env
+config/vpn/vpn.auth
+config/vpn/vpn.conf
+
+# OS junk
+.DS_Store
+Thumbs.db
