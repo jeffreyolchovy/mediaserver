@@ -93,10 +93,56 @@ else
 fi
 REMOTE_SCRIPT
 
-# -- Step 2: Install Docker ------------------------------------------------
+# -- Step 2: Scope Avahi mDNS to physical interfaces -----------------------
+#
+# By default avahi-daemon publishes on all interfaces, including Docker
+# bridge networks created later by compose. When that happens, some clients
+# (browsers with DoH, non-Bonjour resolvers) can resolve <host>.local to a
+# Docker bridge gateway IP (e.g. 172.18.0.1) that is unreachable from the
+# LAN. Restricting avahi to wlan0/eth0 pins .local resolution to the real
+# LAN address. avahi-utils is also installed so avahi-resolve is available
+# for diagnostics.
 
 echo ""
-echo "==> Step 2: Installing Docker"
+echo "==> Step 2: Scoping Avahi mDNS to physical interfaces"
+
+ssh "$TARGET" 'bash -s' <<'REMOTE_SCRIPT'
+set -euo pipefail
+
+if ! dpkg -s avahi-daemon &>/dev/null; then
+    echo "  Installing avahi-daemon..."
+    sudo apt-get install -y -qq avahi-daemon
+fi
+
+if ! dpkg -s avahi-utils &>/dev/null; then
+    echo "  Installing avahi-utils..."
+    sudo apt-get install -y -qq avahi-utils
+fi
+
+CONF=/etc/avahi/avahi-daemon.conf
+
+if grep -qE '^allow-interfaces=wlan0,eth0$' "$CONF"; then
+    echo "  avahi-daemon already scoped to wlan0,eth0."
+else
+    echo "  Backing up $CONF..."
+    sudo cp "$CONF" "${CONF}.bak.$(date +%Y%m%d-%H%M%S)"
+    echo "  Setting allow-interfaces=wlan0,eth0..."
+    # Replace an existing (commented or uncommented) allow-interfaces line,
+    # or append one under [server] if none exists.
+    if grep -qE '^[#[:space:]]*allow-interfaces=' "$CONF"; then
+        sudo sed -i -E 's|^[#[:space:]]*allow-interfaces=.*|allow-interfaces=wlan0,eth0|' "$CONF"
+    else
+        sudo sed -i '/^\[server\]/a allow-interfaces=wlan0,eth0' "$CONF"
+    fi
+    sudo systemctl restart avahi-daemon
+    echo "  avahi-daemon restarted."
+fi
+REMOTE_SCRIPT
+
+# -- Step 3: Install Docker ------------------------------------------------
+
+echo ""
+echo "==> Step 3: Installing Docker"
 
 ssh "$TARGET" 'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
@@ -110,10 +156,10 @@ else
 fi
 REMOTE_SCRIPT
 
-# -- Step 3: Add user to docker group -------------------------------------
+# -- Step 4: Add user to docker group -------------------------------------
 
 echo ""
-echo "==> Step 3: Configuring Docker group"
+echo "==> Step 4: Configuring Docker group"
 
 ssh "$TARGET" "bash -s" <<REMOTE_SCRIPT
 set -euo pipefail
@@ -127,10 +173,10 @@ else
 fi
 REMOTE_SCRIPT
 
-# -- Step 4: Configure Docker daemon --------------------------------------
+# -- Step 5: Configure Docker daemon --------------------------------------
 
 echo ""
-echo "==> Step 4: Configuring Docker daemon"
+echo "==> Step 5: Configuring Docker daemon"
 
 DAEMON_JSON=$(cat "$CONFIG_DIR/daemon.json")
 
@@ -157,10 +203,10 @@ else
 fi
 REMOTE_SCRIPT
 
-# -- Step 5: Detect and mount external drive -------------------------------
+# -- Step 6: Detect and mount external drive -------------------------------
 
 echo ""
-echo "==> Step 5: Mounting external drive"
+echo "==> Step 6: Mounting external drive"
 
 ssh -t "$TARGET" 'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
@@ -220,10 +266,10 @@ sudo mount "$MOUNT_POINT"
 echo "  Mounted $MOUNT_POINT."
 REMOTE_SCRIPT
 
-# -- Step 6: Deploy config files ------------------------------------------
+# -- Step 7: Deploy config files ------------------------------------------
 
 echo ""
-echo "==> Step 6: Deploying config files"
+echo "==> Step 7: Deploying config files"
 
 # Ensure remote directories exist
 ssh "$TARGET" "bash -s" <<REMOTE_SCRIPT
@@ -243,10 +289,10 @@ scp -q "$CONFIG_DIR/vpn/vpn.auth"       "$TARGET:$MEDIA_ROOT/config/vpn/vpn.auth
 
 echo "  Config files deployed."
 
-# -- Step 7: Start services ------------------------------------------------
+# -- Step 8: Start services ------------------------------------------------
 
 echo ""
-echo "==> Step 7: Starting services"
+echo "==> Step 8: Starting services"
 
 ssh "$TARGET" "bash -s" <<REMOTE_SCRIPT
 set -euo pipefail

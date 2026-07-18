@@ -137,6 +137,22 @@ sg docker -c 'docker compose restart emby'
 sg docker -c 'docker compose pull && docker compose up -d'
 ```
 
+### Rebooting or Relocating the Server
+
+When you need to reboot the Pi or physically move it, **stop the stack --
+don't tear it down**:
+
+```bash
+cd /mnt/extmedia/config/services && sg docker -c 'docker compose stop'
+sudo shutdown -h now
+```
+
+Use `stop`, not `down`. `stop` halts the containers but leaves them
+defined, so Docker's `restart: unless-stopped` policy brings them back
+automatically on the next boot. `down` *removes* the containers, which
+means nothing auto-starts after reboot and you have to `docker compose
+up -d` by hand.
+
 ## Configuration Reference
 
 ### VPN Region
