@@ -1,0 +1,16 @@
+[Unit]
+Description=Run mediaserver watchdog every 15 minutes
+Documentation=https://github.com/jeffreyolchovy/mediaserver#watchdog
+
+[Timer]
+# First run 2 minutes after boot (give Docker time to come up), then
+# every 15 minutes thereafter. AccuracySec relaxes exact-scheduling to
+# save power; RandomizedDelaySec spreads load if multiple timers align.
+OnBootSec=2min
+OnUnitActiveSec=15min
+AccuracySec=1min
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Mediaserver watchdog (detects and remediates known container wedges)
+Documentation=https://github.com/jeffreyolchovy/mediaserver#watchdog
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mediaserver-watchdog.sh
+# Run as root so we can talk to the docker socket without sg/newgrp.
+User=root
+# Keep resource use tiny.
+Nice=10
+IOSchedulingClass=idle
