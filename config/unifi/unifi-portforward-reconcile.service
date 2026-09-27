@@ -1,0 +1,10 @@
+[Unit]
+Description=Reconcile UniFi port-forward rules (restore after firmware wipes)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/unifi-portforward-reconcile.sh
+Nice=10
+IOSchedulingClass=idle

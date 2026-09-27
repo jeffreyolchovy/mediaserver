@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly UniFi port-forward reconcile (detect+restore firmware wipes)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
