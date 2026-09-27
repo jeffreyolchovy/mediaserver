@@ -27,7 +27,7 @@ services:
       - label:disable
     ports:
       - 8112:8112
-    command: "-r 192.168.1.0/24"
+    command: "-r ${LOCAL_SUBNET:-192.168.1.0/24}"
 
   deluge:
     container_name: deluge
