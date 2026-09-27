@@ -1,0 +1,7 @@
+{
+  "_comment": "Desired UniFi port-forward rules. Copy to config/unifi/unifi-portforwards.json (gitignored) and edit. The forward target IP comes from MEDIA_IP in unifi.env. The reconciler (Step 11) runs hourly and 3 minutes after boot; it re-creates any rule listed here that's missing on the gateway (for example after a UniFi firmware upgrade wipes them). It only ADDS rules and never deletes: to remove a forward, delete it from this file, re-run install.sh, and only then delete the rule on the gateway.",
+  "_security_note": "Only forward services that are built to be public-facing and have real authentication (Emby). Sonarr, Radarr, Jackett and Deluge use plain-HTTP logins; exposing them sends credentials over the internet in cleartext. Prefer a VPN overlay such as Tailscale for remote admin access.",
+  "forwards": [
+    { "name": "Emby HTTP", "proto": "tcp", "dst_port": "8096", "fwd_port": "8096" }
+  ]
+}

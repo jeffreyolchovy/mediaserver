@@ -2,6 +2,8 @@
 config/.env
 config/vpn/vpn.auth
 config/vpn/vpn.conf
+config/unifi/unifi.env
+config/unifi/unifi-portforwards.json
 
 # OS junk
 .DS_Store

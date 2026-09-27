@@ -385,6 +385,47 @@ fi
 ssh "$TARGET" 'sudo systemctl enable --now mediaserver-watchdog.timer >/dev/null 2>&1 && systemctl is-active mediaserver-watchdog.timer' \
     | sed 's/^/  mediaserver-watchdog.timer: /'
 
+# -- Step 11 (optional): UniFi port-forward reconciler -----------------------
+#
+# UniFi firmware upgrades can silently wipe every port-forward rule, which
+# kills external access. If you're
+# behind a UniFi gateway, this installs an hourly systemd timer that
+# re-creates any missing rule from config/unifi/unifi-portforwards.json via
+# the gateway's local API. It's silent when nothing is missing and logs to
+# journald when it restores something.
+#
+# Runs only if config/unifi/unifi.env and config/unifi/unifi-portforwards.json
+# exist (create them from their .example templates).
+
+echo ""
+echo "==> Step 11: UniFi port-forward reconciler (optional)"
+
+if [[ -f "$CONFIG_DIR/unifi/unifi.env" && -f "$CONFIG_DIR/unifi/unifi-portforwards.json" ]]; then
+    UF_CHANGED=0
+    for pair in \
+        "unifi-portforward-reconcile.sh:/usr/local/sbin/unifi-portforward-reconcile.sh:0755" \
+        "unifi-portforward-reconcile.service:/etc/systemd/system/unifi-portforward-reconcile.service:0644" \
+        "unifi-portforward-reconcile.timer:/etc/systemd/system/unifi-portforward-reconcile.timer:0644" \
+        "unifi-portforwards.json:/etc/mediaserver/unifi-portforwards.json:0644" \
+        "unifi.env:/etc/mediaserver/unifi.env:0600"; do
+        IFS=: read -r src dst mode <<< "$pair"
+        if [[ $(push_root_file "$CONFIG_DIR/unifi/$src" "$dst" "$mode") == "changed" ]]; then
+            echo "  Updated $dst"
+            UF_CHANGED=1
+        fi
+    done
+
+    if (( UF_CHANGED )); then
+        ssh "$TARGET" 'sudo systemctl daemon-reload'
+    else
+        echo "  Reconciler files already up to date."
+    fi
+    ssh "$TARGET" 'sudo systemctl enable --now unifi-portforward-reconcile.timer >/dev/null 2>&1 && systemctl is-active unifi-portforward-reconcile.timer' \
+        | sed 's/^/  unifi-portforward-reconcile.timer: /'
+else
+    echo "  Skipped (config/unifi/unifi.env and/or unifi-portforwards.json not present)."
+fi
+
 echo ""
 echo "==> Done! All services are starting."
 echo ""
