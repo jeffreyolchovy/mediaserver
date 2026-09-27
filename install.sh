@@ -76,6 +76,36 @@ echo "  SSH connection to $TARGET OK."
 REMOTE_USER=$(echo "$TARGET" | cut -d@ -f1)
 MEDIA_ROOT="/mnt/extmedia"
 
+# -- Helper: install a file on the target as root, only if it changed ------
+#
+# Usage: push_root_file <local-src> <remote-dst> <mode>
+# Prints "changed" or "unchanged" so the caller can decide whether to reload
+# or restart anything. The file is streamed over SSH straight into place
+# (umask 077, atomic rename), so it never sits world-readable in /tmp. That
+# matters for secrets such as config/unifi/unifi.env.
+
+sha256_local() {
+    if command -v sha256sum &>/dev/null; then
+        sha256sum "$1" | awk '{print $1}'
+    else
+        shasum -a 256 "$1" | awk '{print $1}'
+    fi
+}
+
+push_root_file() {
+    local src="$1" dst="$2" mode="$3" want have
+    want=$(sha256_local "$src")
+    have=$(ssh "$TARGET" "sudo sha256sum '$dst' 2>/dev/null | awk '{print \$1}'" || true)
+    if [[ "$want" == "$have" ]]; then
+        echo "unchanged"
+        return 0
+    fi
+    # mkdir BEFORE tightening umask so parent dirs get the normal 0755; only
+    # the file itself is written under umask 077.
+    ssh "$TARGET" "sudo sh -c 'mkdir -p \"\$(dirname $dst)\" && umask 077 && cat > $dst.tmp && chown root:root $dst.tmp && chmod $mode $dst.tmp && mv -f $dst.tmp $dst'" < "$src"
+    echo "changed"
+}
+
 # -- Step 1: Install prerequisites ----------------------------------------
 
 echo ""
@@ -300,6 +330,24 @@ cd "$MEDIA_ROOT/config/services"
 sg docker -c 'docker compose pull'
 sg docker -c 'docker compose up -d'
 REMOTE_SCRIPT
+
+# -- Step 9: Persistent, bounded journald -----------------------------------
+#
+# Raspberry Pi OS keeps the journal in RAM (/run/log/journal) by default, so
+# every reboot or power loss wipes the logs. That hides why the server went
+# down and erases the watchdog's history. Persist it to disk, bounded to
+# 200M / 1 month so it can't fill the SD card.
+
+echo ""
+echo "==> Step 9: Enabling persistent journald"
+
+if [[ $(push_root_file "$CONFIG_DIR/journald/persistent.conf" \
+        /etc/systemd/journald.conf.d/persistent.conf 0644) == "changed" ]]; then
+    ssh "$TARGET" 'sudo mkdir -p /var/log/journal && sudo systemctl restart systemd-journald && sudo journalctl --flush'
+    echo "  journald is now persistent (bounded: 200M / 1 month)."
+else
+    echo "  journald already persistent."
+fi
 
 echo ""
 echo "==> Done! All services are starting."
