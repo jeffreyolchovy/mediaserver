@@ -349,6 +349,42 @@ else
     echo "  journald already persistent."
 fi
 
+# -- Step 10: Install the mediaserver watchdog ------------------------------
+#
+# A systemd timer (every 15 min, first run 2 min after boot) runs a small
+# watchdog that auto-remediates known failure modes:
+#   - an expected container is stopped/missing   -> docker compose up -d
+#   - a container is wedged (unhealthy, FailingStreak > 10); auto-restart is
+#     limited to the torrenting stack (vpn, deluge, jackett, flaresolverr),
+#     everything else is logged only
+#   - VPN egress is empty or equals the host's public IP (tunnel down)
+#                                                -> docker compose restart vpn
+#   - empty leaf directories under complete/{tv,movies} -> removed
+# It's silent on a healthy system and logs to journald only when it acts.
+
+echo ""
+echo "==> Step 10: Installing mediaserver watchdog"
+
+WD_CHANGED=0
+for pair in \
+    "mediaserver-watchdog.sh:/usr/local/sbin/mediaserver-watchdog.sh:0755" \
+    "mediaserver-watchdog.service:/etc/systemd/system/mediaserver-watchdog.service:0644" \
+    "mediaserver-watchdog.timer:/etc/systemd/system/mediaserver-watchdog.timer:0644"; do
+    IFS=: read -r src dst mode <<< "$pair"
+    if [[ $(push_root_file "$CONFIG_DIR/watchdog/$src" "$dst" "$mode") == "changed" ]]; then
+        echo "  Updated $dst"
+        WD_CHANGED=1
+    fi
+done
+
+if (( WD_CHANGED )); then
+    ssh "$TARGET" 'sudo systemctl daemon-reload'
+else
+    echo "  Watchdog files already up to date."
+fi
+ssh "$TARGET" 'sudo systemctl enable --now mediaserver-watchdog.timer >/dev/null 2>&1 && systemctl is-active mediaserver-watchdog.timer' \
+    | sed 's/^/  mediaserver-watchdog.timer: /'
+
 echo ""
 echo "==> Done! All services are starting."
 echo ""
