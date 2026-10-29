@@ -353,6 +353,9 @@ fi
 #
 # A systemd timer (every 15 min, first run 2 min after boot) runs a small
 # watchdog that auto-remediates known failure modes:
+#   - /mnt/extmedia missing or unreadable        -> stop all containers; if the
+#     drive is attached but unmounted (USB re-enumeration), e2fsck -p + mount
+#     (at most hourly) and start the stack again
 #   - an expected container is stopped/missing   -> docker compose up -d
 #   - a container is wedged (unhealthy, FailingStreak > 10); auto-restart is
 #     limited to the torrenting stack (vpn, deluge, jackett, flaresolverr),
@@ -360,7 +363,11 @@ fi
 #   - VPN egress is empty or equals the host's public IP (tunnel down)
 #                                                -> docker compose restart vpn
 #   - empty leaf directories under complete/{tv,movies} -> removed
+#   - a container still holds a dropped drive    -> docker compose restart
+#   - root filesystem >= 90% used                -> logged only
 # It's silent on a healthy system and logs to journald only when it acts.
+# If config/watchdog/watchdog.env exists (see watchdog.env.example), every
+# report is also pushed to ntfy.
 
 echo ""
 echo "==> Step 10: Installing mediaserver watchdog"
@@ -376,6 +383,14 @@ for pair in \
         WD_CHANGED=1
     fi
 done
+
+if [[ -f "$CONFIG_DIR/watchdog/watchdog.env" ]]; then
+    if [[ $(push_root_file "$CONFIG_DIR/watchdog/watchdog.env" /etc/mediaserver-watchdog.env 0600) == "changed" ]]; then
+        echo "  Updated /etc/mediaserver-watchdog.env (notifications)"
+    fi
+else
+    echo "  Notifications disabled (config/watchdog/watchdog.env not present)."
+fi
 
 if (( WD_CHANGED )); then
     ssh "$TARGET" 'sudo systemctl daemon-reload'

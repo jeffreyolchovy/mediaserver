@@ -126,6 +126,8 @@ services:
     container_name: samba
     image: crazymax/samba
     restart: unless-stopped
+    ulimits:
+      core: 0
     network_mode: host
     environment:
       - TZ=${TZ}

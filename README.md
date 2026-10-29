@@ -105,7 +105,7 @@ The script will:
    to a Docker bridge IP)
 3. Install Docker
 4. Add your user to the `docker` group
-5. Configure the Docker daemon (custom DNS)
+5. Configure the Docker daemon (custom DNS, container log rotation)
 6. Detect and mount the external USB drive
 7. Deploy all config files
 8. Pull images and start all 9 services
@@ -212,10 +212,13 @@ boot). It handles:
 
 | Condition | Action |
 |---|---|
+| `/mnt/extmedia` not mounted, wrong filesystem, or unreadable | Stop **all** containers and skip the other checks, so nothing runs against a missing drive or writes onto the SD card. If the drive is attached but just unmounted (a USB disconnect/re-enumeration, e.g. `sda` -> `sdb`), run `e2fsck -p` and `mount /mnt/extmedia` (at most once an hour; stops if fsck needs a human), then start the stack |
 | Expected container stopped/missing | `docker compose up -d <name>` |
 | Container unhealthy with `Health.FailingStreak` > 10 | `docker compose restart <name>` -- **torrenting stack only** (vpn, deluge, jackett, flaresolverr); other services are logged, not restarted |
 | VPN egress empty or equal to the host's public IP (tunnel down) | `docker compose restart vpn` (deluge follows) |
 | Empty leaf directories under `complete/{tv,movies}` | removed |
+| Container's `/mnt/extmedia` bind mounts are on a different device than the host's current mount (drive dropped and came back) | `docker compose restart <name>` (any container) |
+| Root filesystem >= 90% used | logged, with the largest container writable layers |
 
 It's silent when everything is healthy, uses a 10-minute per-container
 cooldown to avoid flapping, and logs only to journald:
@@ -224,6 +227,23 @@ cooldown to avoid flapping, and logs only to journald:
 sudo journalctl -u mediaserver-watchdog.service -n 50
 sudo systemctl start mediaserver-watchdog.service   # run it now
 ```
+
+**Notifications (optional).** Copy `config/watchdog/watchdog.env.example`
+to `config/watchdog/watchdog.env` and set `NTFY_URL` to a long, random
+[ntfy](https://ntfy.sh) topic, then re-run `install.sh`. Every watchdog
+report is pushed to that topic (drive failures as urgent). An identical
+report is repeated at most every 6 hours, and a "resolved" message
+follows once a failing run is followed by a clean one.
+
+**Why the drive checks exist.** If a USB drive briefly disconnects, the
+kernel brings it back under a new device name, so systemd's fstab mount
+doesn't return by itself, and running containers keep bind mounts on the
+dead device. Without these checks, services look "Up" but have no media,
+and Samba crash-loops. Because of that, the compose file disables Samba
+core dumps (`ulimits: core: 0`), and `daemon.json` caps container logs at
+3 x 10 MB. A crash loop can otherwise fill the SD card. Existing
+containers only pick up the log limit when recreated
+(`docker compose up -d --force-recreate`).
 
 ### Persistent Logs
 
@@ -318,7 +338,8 @@ mediaserver/
 │   └── watchdog/
 │       ├── mediaserver-watchdog.sh
 │       ├── mediaserver-watchdog.service
-│       └── mediaserver-watchdog.timer
+│       ├── mediaserver-watchdog.timer
+│       └── watchdog.env.example   # Optional ntfy notifications
 ├── README.md
 ├── UNLICENSE
 └── .gitignore
