@@ -4,6 +4,7 @@ config/vpn/vpn.auth
 config/vpn/vpn.conf
 config/unifi/unifi.env
 config/unifi/unifi-portforwards.json
+config/watchdog/watchdog.env
 
 # OS junk
 .DS_Store
